@@ -2,18 +2,19 @@ package com.example.exoplayerdemo;
 
 import androidx.appcompat.app.AppCompatActivity;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.View;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.hls.HlsMediaSource;
+import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
 import com.google.android.exoplayer2.ui.PlayerView;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
-import com.google.android.exoplayer2.util.Util;
 
 public class MainActivity extends AppCompatActivity {
     PlayerView playerView;
@@ -21,6 +22,8 @@ public class MainActivity extends AppCompatActivity {
     private boolean playWhenReady = true;
     private int currentWindow = 0;
     private long playbackPosition = 0;
+    private ScaleGestureDetector gestureDetector;
+    private float mScaleFactor = 1.0f;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -28,6 +31,31 @@ public class MainActivity extends AppCompatActivity {
         playerView = findViewById(R.id.playerView);
         player = new SimpleExoPlayer.Builder(this).build();
         playerView.setPlayer(player);
+        gestureDetector = new ScaleGestureDetector(playerView.getContext(), new ScaleGestureDetector.OnScaleGestureListener() {
+            @Override
+            public boolean onScale(ScaleGestureDetector scaleGestureDetector) {
+                mScaleFactor *= scaleGestureDetector.getScaleFactor();
+                mScaleFactor = Math.max(0.1f, Math.min(mScaleFactor, 10.0f));
+                playerView.setScaleX(mScaleFactor);
+                playerView.setScaleY(mScaleFactor);
+                return true;
+            }
+
+            @Override
+            public boolean onScaleBegin(ScaleGestureDetector scaleGestureDetector) {
+                Log.i("INFO","Pinch detected!");
+                return true;
+            }
+
+            @Override
+            public void onScaleEnd(ScaleGestureDetector scaleGestureDetector) {
+//                if(mScaleFactor>1){
+//                    playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_ZOOM);
+//                }else{
+//                    playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FIT);
+//                }
+            }
+        });
     }
 
     private HlsMediaSource buildMediaSource(MediaItem mediaItem){
@@ -46,6 +74,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        super.onTouchEvent(event);
+        gestureDetector.onTouchEvent(event);
+        return true;
+    }
+
+    @Override
     public void onStart() {
         super.onStart();
         hideSystemUi();
@@ -56,7 +91,7 @@ public class MainActivity extends AppCompatActivity {
     public void onResume() {
         super.onResume();
         hideSystemUi();
-        if ((Util.SDK_INT < 24 || player == null)) {
+        if (player == null) {
             initializePlayer();
         }
     }
@@ -71,7 +106,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onStop() {
         super.onStop();
-        showSystemUI();
         releasePlayer();
     }
     private void hideSystemUi() {
@@ -80,25 +114,11 @@ public class MainActivity extends AppCompatActivity {
         // Or for "sticky immersive," replace it with SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         View decorView = getWindow().getDecorView();
         decorView.setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_IMMERSIVE
-                        // Set the content to appear under the system bars so that the
-                        // content doesn't resize when the system bars hide and show.
-                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                         | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                         | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        // Hide the nav bar and status bar
                         | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                         | View.SYSTEM_UI_FLAG_FULLSCREEN);
-    }
-
-    // Shows the system bars by removing all the flags
-// except for the ones that make the content appear under the system bars.
-    private void showSystemUI() {
-        View decorView = getWindow().getDecorView();
-        decorView.setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
     }
 
     private void releasePlayer() {
