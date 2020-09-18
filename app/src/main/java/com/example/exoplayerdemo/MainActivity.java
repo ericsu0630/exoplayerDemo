@@ -1,17 +1,22 @@
 package com.example.exoplayerdemo;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+
+import android.content.pm.ActivityInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
 import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.hls.HlsMediaSource;
-import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
 import com.google.android.exoplayer2.ui.PlayerView;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
@@ -19,19 +24,25 @@ import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 public class MainActivity extends AppCompatActivity {
     PlayerView playerView;
     SimpleExoPlayer player;
+    ProgressBar progressBar;
+    ImageView fullscreenButton;
     private boolean playWhenReady = true;
     private int currentWindow = 0;
     private long playbackPosition = 0;
     private ScaleGestureDetector gestureDetector;
     private float mScaleFactor = 1.0f;
+    private boolean isFullScreen = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         playerView = findViewById(R.id.playerView);
+        progressBar = findViewById(R.id.progress_bar);
+        fullscreenButton = findViewById(R.id.button_fullscreen);
         player = new SimpleExoPlayer.Builder(this).build();
         playerView.setPlayer(player);
-        gestureDetector = new ScaleGestureDetector(playerView.getContext(), new ScaleGestureDetector.OnScaleGestureListener() {
+        playerView.setKeepScreenOn(true);
+        gestureDetector = new ScaleGestureDetector(this, new ScaleGestureDetector.OnScaleGestureListener() {
             @Override
             public boolean onScale(ScaleGestureDetector scaleGestureDetector) {
                 mScaleFactor *= scaleGestureDetector.getScaleFactor();
@@ -49,11 +60,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onScaleEnd(ScaleGestureDetector scaleGestureDetector) {
-//                if(mScaleFactor>1){
-//                    playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_ZOOM);
-//                }else{
-//                    playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FIT);
-//                }
+
             }
         });
     }
@@ -68,9 +75,34 @@ public class MainActivity extends AppCompatActivity {
         MediaItem mediaItem = MediaItem.fromUri(uri);
         MediaSource mediaSource = buildMediaSource(mediaItem);
         player.setMediaSource(mediaSource);
-        player.setPlayWhenReady(playWhenReady);
         player.seekTo(currentWindow, playbackPosition);
         player.prepare();
+        player.setPlayWhenReady(playWhenReady);
+        player.addListener(new Player.EventListener(){
+            @Override
+            public void onPlaybackStateChanged(int state) {
+                if(state == Player.STATE_BUFFERING){
+                    progressBar.setVisibility(View.VISIBLE);
+                }else if(state == Player.STATE_READY){
+                    progressBar.setVisibility(View.GONE);
+                }
+            }
+        });
+
+        fullscreenButton.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View view) {
+                if(isFullScreen){
+                    fullscreenButton.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(),R.drawable.ic_fullscreen));
+                    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+                    isFullScreen = false;
+                }else{
+                    fullscreenButton.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(),R.drawable.ic_fullscreen_exit));
+                    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+                    isFullScreen = true;
+                }
+            }
+        });
     }
 
     @Override
@@ -99,8 +131,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onPause() {
         super.onPause();
-        releasePlayer();
-
+        player.setPlayWhenReady(false);
+        player.getPlaybackState();
     }
 
     @Override
@@ -108,16 +140,25 @@ public class MainActivity extends AppCompatActivity {
         super.onStop();
         releasePlayer();
     }
+
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        hideSystemUi();
+        player.setPlayWhenReady(true);
+        player.getPlaybackState();
+    }
+
     private void hideSystemUi() {
         // Enables regular immersive mode.
         // For "lean back" mode, remove SYSTEM_UI_FLAG_IMMERSIVE.
         // Or for "sticky immersive," replace it with SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         View decorView = getWindow().getDecorView();
         decorView.setSystemUiVisibility(
-                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+//                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+//                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+//                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                         View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                         | View.SYSTEM_UI_FLAG_FULLSCREEN);
     }
 

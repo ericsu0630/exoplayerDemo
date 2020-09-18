@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
 
 android {
     compileSdkVersion 30
@@ -35,6 +36,11 @@ dependencies {
     implementation 'com.google.android.exoplayer:exoplayer-core:2.12.0'
     implementation 'com.google.android.exoplayer:exoplayer-hls:2.12.0'
     implementation 'com.google.android.exoplayer:exoplayer-ui:2.12.0'
+    implementation "androidx.core:core-ktx:+"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 
 
+}
+repositories {
+    mavenCentral()
 }
