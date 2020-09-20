@@ -29,14 +29,15 @@ public class MainActivity extends AppCompatActivity {
     PlayerView playerView;
     SimpleExoPlayer player;
     ProgressBar progressBar;
-    ImageView fullscreenButton;
-    ImageView playbackSpeedButton;
-    TextView speedText;
+    ImageView fullscreenButton, playbackSpeedButton, zoomButton;
+    TextView speedText, zoomText;
     TextureView videoSurface;
+    View customController;
     private boolean playWhenReady = true;
     private int currentWindow = 0;
     private long playbackPosition = 0;
     private ScaleGestureDetector gestureDetector;
+    private String zoomFactor = "100%";
     private float mScaleFactor = 1.0f;
     private boolean isFullScreen = false;
     private float speed = 1f;
@@ -51,7 +52,10 @@ public class MainActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progress_bar);
         fullscreenButton = findViewById(R.id.button_fullscreen);
         playbackSpeedButton = findViewById(R.id.button_playback_speed);
+        zoomButton = findViewById(R.id.button_zoom);
         speedText = findViewById(R.id.text_playback_speed);
+        zoomText = findViewById(R.id.text_zoom);
+        customController = findViewById(R.id.custom_controller);
 
         DefaultTrackSelector trackSelector = new DefaultTrackSelector(this);
         player = new SimpleExoPlayer.Builder(this).setTrackSelector(trackSelector).build();
@@ -64,7 +68,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean onScale(ScaleGestureDetector scaleGestureDetector) {
                 mScaleFactor *= scaleGestureDetector.getScaleFactor();
-                mScaleFactor = Math.max(0.1f, Math.min(mScaleFactor, 10.0f));
+                mScaleFactor = Math.max(0.5f, Math.min(mScaleFactor, 4.0f)); //scale range is 50% to 400%
+                zoomFactor = (int)(mScaleFactor*100f) + "%";
+                zoomText.setText(zoomFactor);
                 videoSurface.setScaleX(mScaleFactor);
                 videoSurface.setScaleY(mScaleFactor);
                 return true;
@@ -73,12 +79,24 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean onScaleBegin(ScaleGestureDetector scaleGestureDetector) {
                 Log.i("INFO","Pinch gesture detected.");
+                customController.setVisibility(View.GONE);
+                zoomText.setVisibility(View.VISIBLE);
                 return true;
             }
 
             @Override
             public void onScaleEnd(ScaleGestureDetector scaleGestureDetector) {
                 Log.i("INFO","Video surface scale changed.");
+                zoomText.setVisibility(View.GONE);
+                customController.setVisibility(View.VISIBLE);
+                zoomButton.setVisibility(View.VISIBLE);
+                if(mScaleFactor > 1f){
+                    zoomButton.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(),R.drawable.ic_zoom_out));
+                }else if (mScaleFactor <1f){
+                    zoomButton.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(),R.drawable.ic_zoom));
+                }else{
+                    zoomButton.setVisibility(View.GONE);
+                }
             }
         });
     }
@@ -160,6 +178,17 @@ public class MainActivity extends AppCompatActivity {
                     param = new PlaybackParameters(speed);
                 }
                 player.setPlaybackParameters(param);
+            }
+        });
+
+        //reset zoom to 100%
+        zoomButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                videoSurface.setScaleX(1f);
+                videoSurface.setScaleY(1f);
+                mScaleFactor = 1f;
+                zoomButton.setVisibility(View.GONE);
             }
         });
     }

@@ -6,4 +6,5 @@
     <string name="normal">1X</string>
     <string name="doubleSpeed">2X</string>
     <string name="quadSpeed">4X</string>
+    <string name="normalzoom">100%</string>
 </resources>
