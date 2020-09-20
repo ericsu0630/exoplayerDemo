@@ -11,6 +11,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@android:color/background_dark"
+            app:surface_type="texture_view"
             app:resize_mode="fit"
             app:hide_on_touch="true"
             app:show_timeout="5000"

@@ -2,24 +2,25 @@ package com.example.exoplayerdemo;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-
 import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
+import android.view.TextureView;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.PlaybackParameters;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.hls.HlsMediaSource;
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
 import com.google.android.exoplayer2.ui.PlayerView;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
@@ -31,6 +32,7 @@ public class MainActivity extends AppCompatActivity {
     ImageView fullscreenButton;
     ImageView playbackSpeedButton;
     TextView speedText;
+    TextureView videoSurface;
     private boolean playWhenReady = true;
     private int currentWindow = 0;
     private long playbackPosition = 0;
@@ -38,46 +40,56 @@ public class MainActivity extends AppCompatActivity {
     private float mScaleFactor = 1.0f;
     private boolean isFullScreen = false;
     private float speed = 1f;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        //initialize views
         playerView = findViewById(R.id.playerView);
         progressBar = findViewById(R.id.progress_bar);
         fullscreenButton = findViewById(R.id.button_fullscreen);
         playbackSpeedButton = findViewById(R.id.button_playback_speed);
         speedText = findViewById(R.id.text_playback_speed);
-        player = new SimpleExoPlayer.Builder(this).build();
+
+        DefaultTrackSelector trackSelector = new DefaultTrackSelector(this);
+        player = new SimpleExoPlayer.Builder(this).setTrackSelector(trackSelector).build();
         playerView.setPlayer(player);
         playerView.setKeepScreenOn(true);
+        videoSurface = (TextureView) playerView.getVideoSurfaceView();
+
+        //Detect pinch gesture and scale the video surface
         gestureDetector = new ScaleGestureDetector(this, new ScaleGestureDetector.OnScaleGestureListener() {
             @Override
             public boolean onScale(ScaleGestureDetector scaleGestureDetector) {
                 mScaleFactor *= scaleGestureDetector.getScaleFactor();
                 mScaleFactor = Math.max(0.1f, Math.min(mScaleFactor, 10.0f));
-                playerView.setScaleX(mScaleFactor);
-                playerView.setScaleY(mScaleFactor);
+                videoSurface.setScaleX(mScaleFactor);
+                videoSurface.setScaleY(mScaleFactor);
                 return true;
             }
 
             @Override
             public boolean onScaleBegin(ScaleGestureDetector scaleGestureDetector) {
-                Log.i("INFO","Pinch detected!");
+                Log.i("INFO","Pinch gesture detected.");
                 return true;
             }
 
             @Override
             public void onScaleEnd(ScaleGestureDetector scaleGestureDetector) {
-
+                Log.i("INFO","Video surface scale changed.");
             }
         });
     }
 
+    //build media source using HLS
     private HlsMediaSource buildMediaSource(MediaItem mediaItem){
         DataSource.Factory dataSourceFactory = new DefaultDataSourceFactory(this, "exoplayerdemo");
         return new HlsMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem);
     }
 
+    //initialize exo player
     public void initializePlayer(){
         Uri uri = Uri.parse("https://ileaning.blueeyes.tv/hls/ed7405de-1b22-7a34-9579-c813d3c6d969_1080p_1.m3u8");
         MediaItem mediaItem = MediaItem.fromUri(uri);
@@ -86,6 +98,20 @@ public class MainActivity extends AppCompatActivity {
         player.seekTo(currentWindow, playbackPosition);
         player.prepare();
         player.setPlayWhenReady(playWhenReady);
+
+        //check orientation of screen when player starts
+        int orientation = getResources().getConfiguration().orientation;
+        if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            // In landscape
+            fullscreenButton.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(),R.drawable.ic_fullscreen_exit));
+            isFullScreen = true;
+        } else {
+            // In portrait
+            fullscreenButton.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(),R.drawable.ic_fullscreen));
+            isFullScreen = false;
+        }
+
+        //Progress bar control
         player.addListener(new Player.EventListener(){
             @Override
             public void onPlaybackStateChanged(int state) {
@@ -97,6 +123,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        //fullscreen button control
         fullscreenButton.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view) {
@@ -112,6 +139,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        //playback speed button control
         playbackSpeedButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -134,8 +162,6 @@ public class MainActivity extends AppCompatActivity {
                 player.setPlaybackParameters(param);
             }
         });
-
-
     }
 
     @Override
@@ -183,14 +209,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void hideSystemUi() {
-        // Enables regular immersive mode.
-        // For "lean back" mode, remove SYSTEM_UI_FLAG_IMMERSIVE.
-        // Or for "sticky immersive," replace it with SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         View decorView = getWindow().getDecorView();
         decorView.setSystemUiVisibility(
-                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-//                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-//                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                View.SYSTEM_UI_FLAG_IMMERSIVE
+                        // Set the content to appear under the system bars so that the
+                        // content doesn't resize when the system bars hide and show.
+                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        // Hide the nav bar and status bar
                         | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                         | View.SYSTEM_UI_FLAG_FULLSCREEN);
     }
