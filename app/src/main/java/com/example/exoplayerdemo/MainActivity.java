@@ -12,7 +12,10 @@ import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.TextView;
+
 import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.PlaybackParameters;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.source.MediaSource;
@@ -26,12 +29,15 @@ public class MainActivity extends AppCompatActivity {
     SimpleExoPlayer player;
     ProgressBar progressBar;
     ImageView fullscreenButton;
+    ImageView playbackSpeedButton;
+    TextView speedText;
     private boolean playWhenReady = true;
     private int currentWindow = 0;
     private long playbackPosition = 0;
     private ScaleGestureDetector gestureDetector;
     private float mScaleFactor = 1.0f;
     private boolean isFullScreen = false;
+    private float speed = 1f;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -39,6 +45,8 @@ public class MainActivity extends AppCompatActivity {
         playerView = findViewById(R.id.playerView);
         progressBar = findViewById(R.id.progress_bar);
         fullscreenButton = findViewById(R.id.button_fullscreen);
+        playbackSpeedButton = findViewById(R.id.button_playback_speed);
+        speedText = findViewById(R.id.text_playback_speed);
         player = new SimpleExoPlayer.Builder(this).build();
         playerView.setPlayer(player);
         playerView.setKeepScreenOn(true);
@@ -103,6 +111,31 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+        playbackSpeedButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                PlaybackParameters param;
+                if(speed == 2f){
+                    speedText.setText(R.string.quadSpeed);
+                    speed = 4f; //set speed to 4x
+                    param = new PlaybackParameters(speed);
+
+                }else if (speed == 4f){
+                    speedText.setText(R.string.normal);
+                    speed = 1f; //return to normal speed
+                    param = new PlaybackParameters(speed);
+                }
+                else{
+                    speedText.setText(R.string.doubleSpeed);
+                    speed = 2f; //set speed to 2x
+                    param = new PlaybackParameters(speed);
+                }
+                player.setPlaybackParameters(param);
+            }
+        });
+
+
     }
 
     @Override
@@ -155,10 +188,10 @@ public class MainActivity extends AppCompatActivity {
         // Or for "sticky immersive," replace it with SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         View decorView = getWindow().getDecorView();
         decorView.setSystemUiVisibility(
-//                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE
 //                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
 //                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                         View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                         | View.SYSTEM_UI_FLAG_FULLSCREEN);
     }
 

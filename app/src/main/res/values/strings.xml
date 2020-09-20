@@ -3,4 +3,7 @@
     <string name="slash">/</string>
     <string name="fullscreen_button">fullscreen button</string>
     <string name="zero">00:00</string>
+    <string name="normal">1X</string>
+    <string name="doubleSpeed">2X</string>
+    <string name="quadSpeed">4X</string>
 </resources>
